@@ -17,7 +17,7 @@
 unsigned char sps[64], pps[64];
 uint8_t aacAdtsHeader[7]; // adts header len: 7 bytes.
 int spslen = 0, ppslen = 0;
-uint32_t g264FrameLenSize = 0; // mp4ÀïµÄAVCC¸ñÊ½µÄ264Ö¡µÄ³¤¶È×Ö¶Î£¬Õ¼ÓÃµÄ×Ö½ÚÊı£¬Ò»°ãÊÇ4.
+uint32_t g264FrameLenSize = 0; // mp4é‡Œçš„AVCCæ ¼å¼çš„264å¸§çš„é•¿åº¦å­—æ®µï¼Œå ç”¨çš„å­—èŠ‚æ•°ï¼Œä¸€èˆ¬æ˜¯4.
 uint8_t gAudioType = 0;
 int gAudioChanNum = -1;
 int gAudioRateIndex = 0;
@@ -42,7 +42,7 @@ int get264Stream(MP4FileHandle oMp4File, int VTrackId, int totalFrame)
     char NAL[4] = { 0x00,0x00,0x00,0x01 };
     
     unsigned int nSize = 1024 * 1024 * 1;
-    unsigned char *pData = (unsigned char *)malloc(nSize); // ×î´óÔÊĞí1MBµÄÖ¡
+    unsigned char *pData = (unsigned char *)malloc(nSize); // æœ€å¤§å…è®¸1MBçš„å¸§
 
     unsigned char *p = NULL;
     MP4Timestamp pStartTime;
@@ -65,8 +65,8 @@ int get264Stream(MP4FileHandle oMp4File, int VTrackId, int totalFrame)
 
         // printf("I:%d, nSize:%u.   nReadIndex:%d\n", pIsSyncSample, nSize, nReadIndex);
 
-        // IDRÖ¡£¬Ğ´Èësps ppsÏÈ
-        // Õâ¸öÈç¹ûÊÇĞ´ÎÄ¼ş£¬ÔòÖ»Ğ´Ò»´Î¼´¿É£¬Èç¹ûÊÇÁ÷´«Êä£¬ÄÇ×îºÃÃ¿¸öIDRÖ¡Ğ´Èë.
+        // IDRå¸§ï¼Œå†™å…¥sps ppså…ˆ
+        // è¿™ä¸ªå¦‚æœæ˜¯å†™æ–‡ä»¶ï¼Œåˆ™åªå†™ä¸€æ¬¡å³å¯ï¼Œå¦‚æœæ˜¯æµä¼ è¾“ï¼Œé‚£æœ€å¥½æ¯ä¸ªIDRå¸§å†™å…¥.
         if (firstWriteFile && pIsSyncSample)
         {
             fwrite(NAL, sizeof(NAL), 1, pFile);
@@ -81,8 +81,8 @@ int get264Stream(MP4FileHandle oMp4File, int VTrackId, int totalFrame)
         p = pData;
         while (nSize > 0) 
         {
-            // ±ê×¼µÄ264Ö¡£¬Ç°Ãæ4¸ö×Ö½Ú¾ÍÊÇframeµÄ³¤¶È£¨H264 AVCC¸ñÊ½£©
-            // ĞèÒªÏÈĞ´Èë±ê×¼µÄ264 nal Í·.
+            // æ ‡å‡†çš„264å¸§ï¼Œå‰é¢4ä¸ªå­—èŠ‚å°±æ˜¯frameçš„é•¿åº¦ï¼ˆH264 AVCCæ ¼å¼ï¼‰
+            // éœ€è¦å…ˆå†™å…¥æ ‡å‡†çš„264 nal å¤´.
             fwrite(NAL, sizeof(NAL), 1, pFile);
 
             frameSize = 0x0;
@@ -108,20 +108,20 @@ int get264Stream(MP4FileHandle oMp4File, int VTrackId, int totalFrame)
                 break;
             }
             
-            // ½«nSizeµİ¼õ£¬Æ«ÒÆµ½ÏÂÒ»¸öÖ¡µÄÎ»ÖÃ
+            // å°†nSizeé€’å‡ï¼Œåç§»åˆ°ä¸‹ä¸€ä¸ªå¸§çš„ä½ç½®
             nSize = nSize - frameSize - g264FrameLenSize;
             if(nSize < 0)
                 printf("Err. I:%d, framesize=%x, nSize=%d\n", pIsSyncSample, frameSize, nSize);
-            p = p + g264FrameLenSize; // ³¤¶È×Ö¶Î²»Êä³ö
+            p = p + g264FrameLenSize; // é•¿åº¦å­—æ®µä¸è¾“å‡º
             fwrite(p, frameSize, 1, pFile);
-            if (nSize > 0) // ±íÊ¾´Ë´ÎMP4ReadSample()»ñÈ¡µÄÊı¾İ£¬²»Ö¹1Ö¡£¬ËùÒÔ¼ÌĞø´¦Àí
+            if (nSize > 0) // è¡¨ç¤ºæ­¤æ¬¡MP4ReadSample()è·å–çš„æ•°æ®ï¼Œä¸æ­¢1å¸§ï¼Œæ‰€ä»¥ç»§ç»­å¤„ç†
                 p = p + frameSize;
         }
 
-        // Èç¹û´«ÈëMP4ReadSampleµÄÊÓÆµpDataÊÇnull
-        // ËüÄÚ²¿¾Í»ánew Ò»¸öÄÚ´æ
-        // Èç¹û´«ÈëµÄÊÇÒÑÖªµÄÄÚ´æÇøÓò£¬
-        // ÔòĞèÒª±£Ö¤¿Õ¼äbigger then max frames size.
+        // å¦‚æœä¼ å…¥MP4ReadSampleçš„è§†é¢‘pDataæ˜¯null
+        // å®ƒå†…éƒ¨å°±ä¼šnew ä¸€ä¸ªå†…å­˜
+        // å¦‚æœä¼ å…¥çš„æ˜¯å·²çŸ¥çš„å†…å­˜åŒºåŸŸï¼Œ
+        // åˆ™éœ€è¦ä¿è¯ç©ºé—´bigger then max frames size.
         // free(p);
         // pData = NULL;
         // p = NULL;
@@ -162,10 +162,10 @@ int getAACStream(MP4FileHandle oMp4File, int ATrackId, int totalFrame)
         fwrite(pData, nSize, 1, pFile);
 
 
-        //Èç¹û´«ÈëMP4ReadSampleµÄÊÓÆµpDataÊÇnull
-        // ËüÄÚ²¿¾Í»ánew Ò»¸öÄÚ´æ
-        //Èç¹û´«ÈëµÄÊÇÒÑÖªµÄÄÚ´æÇøÓò£¬
-        //ÔòĞèÒª±£Ö¤¿Õ¼äbigger then max frames size.
+        //å¦‚æœä¼ å…¥MP4ReadSampleçš„è§†é¢‘pDataæ˜¯null
+        // å®ƒå†…éƒ¨å°±ä¼šnew ä¸€ä¸ªå†…å­˜
+        //å¦‚æœä¼ å…¥çš„æ˜¯å·²çŸ¥çš„å†…å­˜åŒºåŸŸï¼Œ
+        //åˆ™éœ€è¦ä¿è¯ç©ºé—´bigger then max frames size.
         free(pData);
         pData = NULL;
     }
@@ -176,7 +176,7 @@ int getAACStream(MP4FileHandle oMp4File, int ATrackId, int totalFrame)
     return 0;
 }
 
-// ADTSÖ¡³¤¶È°üÀ¨ADTS³¤¶ÈºÍAACÉùÒôÊı¾İ³¤¶ÈµÄºÍ
+// ADTSå¸§é•¿åº¦packetLenåŒ…æ‹¬ADTSé•¿åº¦å’ŒAACå£°éŸ³æ•°æ®é•¿åº¦çš„å’Œ
 // Ref: https://www.cnblogs.com/lidabo/p/7261558.html
 void fillAdtsHeader(uint8_t* aacAdtsHeader, int packetLen)
 {
@@ -191,14 +191,14 @@ void fillAdtsHeader(uint8_t* aacAdtsHeader, int packetLen)
 }
 
 /* demuxMp4File
- * ½âÎöÒ»¸ömp4ÎÄ¼ş£¨¼Ù¶¨ÊÇh264 + AAC£©£¬·Ö±ğ½«ÒôÊÓÆµ´æ´¢µ½²»Í¬Ä¿±êÎÄ¼şÖĞ
- * h264Ä¿±êÎÄ¼şÊÇAnnex B¸ñÊ½£¨´ø00 00 00 01Í·µÄÄÇÖÖ£©£¬²Î¿¼£º
+ * è§£æä¸€ä¸ªmp4æ–‡ä»¶ï¼ˆå‡å®šæ˜¯h264 + AACï¼‰ï¼Œåˆ†åˆ«å°†éŸ³è§†é¢‘å­˜å‚¨åˆ°ä¸åŒç›®æ ‡æ–‡ä»¶ä¸­
+ * h264ç›®æ ‡æ–‡ä»¶æ˜¯Annex Bæ ¼å¼ï¼ˆå¸¦00 00 00 01å¤´çš„é‚£ç§ï¼‰ï¼Œå‚è€ƒï¼š
  * https://blog.csdn.net/romantic_energy/article/details/50508332
  * https://blog.csdn.net/lq496387202/article/details/81510622
- * aacÄ¿±êÎÄ¼şÊÇAACÂãÁ÷£¨Ìî³äÁËadtsÍ·£©£¬²Î¿¼£º
+ * aacç›®æ ‡æ–‡ä»¶æ˜¯AACè£¸æµï¼ˆå¡«å……äº†adtså¤´ï¼‰ï¼Œå‚è€ƒï¼š
  * https://www.cnblogs.com/lidabo/p/7261558.html
  * https://www.cnblogs.com/yanwei-wang/p/12758570.html
- * À×ÉñµÄblog£ºhttps://blog.csdn.net/leixiaohua1020/article/details/39767055
+ * é›·ç¥çš„blogï¼šhttps://blog.csdn.net/leixiaohua1020/article/details/39767055
 */
 int demuxMp4File(const char *sMp4file)
 {
@@ -250,10 +250,10 @@ int demuxMp4File(const char *sMp4file)
             MP4GetTrackH264SeqPictHeaders(oMp4File, trackId, &seqheader, &seqheadersize, &pictheader, &pictheadersize);
 
             /* Ref:
-              mp4´æ´¢H.264Á÷µÄ·½Ê½ÊÇAVCC¸ñÊ½£¬
-              ÔÚÕâÖÖ¸ñÊ½ÖĞ£¬Ã¿Ò»¸öNALU°ü¶¼¼ÓÉÏÁËÒ»¸öÖ¸¶¨Æä³¤¶È(NALU°ü´óĞ¡)µÄÇ°×º(in big endian format´ó¶Ë¸ñÊ½)£¬
-              ÕâÖÖ¸ñÊ½µÄ°ü·Ç³£ÈİÒ×½âÎö£¬µ«ÊÇÕâÖÖ¸ñÊ½È¥µôÁËAnnex B¸ñÊ½ÖĞµÄ×Ö½Ú¶ÔÆëÌØĞÔ£¬¶øÇÒÇ°×º¿ÉÒÔÊÇ1¡¢2»ò4×Ö½Ú£¬
-              ÕâÈÃAVCC¸ñÊ½±äµÃ¸ü¸´ÔÓÁË£¬Ö¸¶¨Ç°×º×Ö½ÚÊı(1¡¢2»ò4×Ö½Ú)µÄÖµ±£´æÔÚÒ»¸öÍ·²¿¶ÔÏóÖĞ(Á÷¿ªÊ¼µÄ²¿·Ö)
+              mp4å­˜å‚¨H.264æµçš„æ–¹å¼æ˜¯AVCCæ ¼å¼ï¼Œ
+              åœ¨è¿™ç§æ ¼å¼ä¸­ï¼Œæ¯ä¸€ä¸ªNALUåŒ…éƒ½åŠ ä¸Šäº†ä¸€ä¸ªæŒ‡å®šå…¶é•¿åº¦(NALUåŒ…å¤§å°)çš„å‰ç¼€(in big endian formatå¤§ç«¯æ ¼å¼)ï¼Œ
+              è¿™ç§æ ¼å¼çš„åŒ…éå¸¸å®¹æ˜“è§£æï¼Œä½†æ˜¯è¿™ç§æ ¼å¼å»æ‰äº†Annex Bæ ¼å¼ä¸­çš„å­—èŠ‚å¯¹é½ç‰¹æ€§ï¼Œè€Œä¸”å‰ç¼€å¯ä»¥æ˜¯1ã€2æˆ–4å­—èŠ‚ï¼Œ
+              è¿™è®©AVCCæ ¼å¼å˜å¾—æ›´å¤æ‚äº†ï¼ŒæŒ‡å®šå‰ç¼€å­—èŠ‚æ•°(1ã€2æˆ–4å­—èŠ‚)çš„å€¼ä¿å­˜åœ¨ä¸€ä¸ªå¤´éƒ¨å¯¹è±¡ä¸­(æµå¼€å§‹çš„éƒ¨åˆ†)
             */
             MP4GetTrackH264LengthSize(oMp4File, trackId, &g264FrameLenSize);
 
@@ -279,8 +279,8 @@ int demuxMp4File(const char *sMp4file)
         {
             audioindex = trackId;
             aFrameCount = MP4GetTrackNumberOfSamples(oMp4File, trackId);
-            // »ñÈ¡ÒôÆµµÄÀàĞÍ/ÉùµÀÊı/²ÉÑùÂÊ
-            // ¾ßÌå½âÊÍ¼û mp4v2¿âµÄ£ºsrc/mp4info.cpp -> PrintAudioInfo()
+            // è·å–éŸ³é¢‘çš„ç±»å‹/å£°é“æ•°/é‡‡æ ·ç‡
+            // å…·ä½“è§£é‡Šè§ mp4v2åº“çš„ï¼šsrc/mp4info.cpp -> PrintAudioInfo()
             gAudioType = MP4GetTrackAudioMpeg4Type(oMp4File, trackId);
             gAudioChanNum = MP4GetTrackAudioChannels(oMp4File, trackId);
             uint32_t audio_time_scale = MP4GetTrackTimeScale(oMp4File, trackId);
@@ -288,9 +288,9 @@ int demuxMp4File(const char *sMp4file)
             printf("audio: type %x, channel_num: %d, %u Hz\n", gAudioType, gAudioChanNum, audio_time_scale);
 
             //const char * audio_name = MP4GetTrackMediaDataName(inFile, id);
-            //TRACE("=== ÒôÆµ±àÂë£º%s ===\n", audio_name);
+            //TRACE("=== éŸ³é¢‘ç¼–ç ï¼š%s ===\n", audio_name);
             
-            // TRACE("=== ÒôÆµÃ¿Ãë¿Ì¶ÈÊı(²ÉÑùÂÊ)£º%lu ===\n", audio_time_scale);
+            // TRACE("=== éŸ³é¢‘æ¯ç§’åˆ»åº¦æ•°(é‡‡æ ·ç‡)ï¼š%lu ===\n", audio_time_scale);
             if (audio_time_scale == 48000)
                 gAudioRateIndex = 0x03;
             else if (audio_time_scale == 44100)
@@ -313,13 +313,13 @@ int demuxMp4File(const char *sMp4file)
         }
     }
 
-    // ½âÎöÍêÁËmp4£¬¿ªÊ¼½«¸÷×Ôtrack·ÖÀë´æ´¢
+    // è§£æå®Œäº†mp4ï¼Œå¼€å§‹å°†å„è‡ªtrackåˆ†ç¦»å­˜å‚¨
     if (videoindex >= 0)
         get264Stream(oMp4File, videoindex, vFrameCount);
     if (audioindex >= 0)
         getAACStream(oMp4File, audioindex, aFrameCount);
 
-    // ĞèÒªmp4close
+    // éœ€è¦mp4close
     MP4Close(oMp4File, 0);
     return 0;
 }
