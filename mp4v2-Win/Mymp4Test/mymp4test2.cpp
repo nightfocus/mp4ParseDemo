@@ -1,4 +1,4 @@
-#if defined( _WIN32 )
+﻿#if defined( _WIN32 )
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
@@ -15,12 +15,12 @@
 
 
 unsigned char sps[64], pps[64];
-uint8_t aacAdtsHeader[7]; // adts header len: 7 bytes.
+uint8_t aacAdtsHeader[7]; // adts header use len: 7 bytes.
 int spslen = 0, ppslen = 0;
 uint32_t g264FrameLenSize = 0; // mp4里的AVCC格式的264帧的长度字段，占用的字节数，一般是4.
 uint8_t gAudioType = 0;
 int gAudioChanNum = -1;
-int gAudioRateIndex = 0;
+int gAudioRateIndex = -1;
 
 int get264Stream(MP4FileHandle oMp4File, int VTrackId, int totalFrame);
 int getAACStream(MP4FileHandle oMp4File, int ATrackId, int totalFrame);
@@ -156,8 +156,7 @@ int getAACStream(MP4FileHandle oMp4File, int ATrackId, int totalFrame)
         nReadIndex++;
 
         MP4ReadSample(oMp4File, ATrackId, nReadIndex, &pData, &nSize, &pStartTime, &pDuration, &pRenderingOffset);
-        // p = pData;
-        fillAdtsHeader(aacAdtsHeader, nSize + sizeof(aacAdtsHeader));
+        fillAdtsHeader(aacAdtsHeader, nSize);
         fwrite(aacAdtsHeader, sizeof(aacAdtsHeader), 1, pFile);
         fwrite(pData, nSize, 1, pFile);
 
@@ -176,18 +175,52 @@ int getAACStream(MP4FileHandle oMp4File, int ATrackId, int totalFrame)
     return 0;
 }
 
-// ADTS帧长度packetLen包括ADTS长度和AAC声音数据长度的和
+// 
 // Ref: https://www.cnblogs.com/lidabo/p/7261558.html
-void fillAdtsHeader(uint8_t* aacAdtsHeader, int packetLen)
+// https://blog.nowcoder.net/n/e8f9c78aa2e0453aa2800cce162435c5
+/*
+Structure{
+    AAAAAAAA AAAABCCD EEFFFFGH HHIJKLMM MMMMMMMM MMMOOOOO OOOOOOPP (QQQQQQQQ QQQQQQQQ)
+    Header consists of 7 or 9 bytes (without or with CRC).
+}
+Letter Length (bits) Description
+A     12      syncword 0xFFF, all bits must be 1
+B     1       MPEG Version: 0 for MPEG-4, 1 for MPEG-2
+C     2       Layer: always 0
+D     1       protection absent, Warning, set to 1 if there is no CRC and 0 if there is CRC
+E     2       profile, the MPEG-4 Audio Object Type minus 1
+F     4       MPEG-4 Sampling Frequency Index (15 is forbidden)
+G     1       private stream, set to 0 when encoding, ignore when decoding
+H     3       MPEG-4 Channel Configuration (in the case of 0, the channel configuration is sent via an inband PCE)
+I     1       originality, set to 0 when encoding, ignore when decoding
+J     1       home, set to 0 when encoding, ignore when decoding
+K     1       copyrighted stream, set to 0 when encoding, ignore when decoding
+L     1       copyright start, set to 0 when encoding, ignore when decoding
+M     13      frame length, this value must include 7 or 9 bytes of header length: FrameLength =
+
+(D == 1 ? 7 : 9) + size(AACFrame)
+O     11      Buffer fullness
+P     2       Number of AAC frames (RDBs) in ADTS frame minus 1, for maximum compatibility always use 1 AAC frame per ADTS frame
+Q     16      CRC if protection absent is 0
+
+Usage in MPEG-TS
+ADTS packet must be a content of PES packet. Pack AAC data inside ADTS frame, than pack inside PES packet, then mux by TS packetizer.
+
+Usage in Shoutcast
+ADTS frames goes one by one in TCP stream. Look for syncword, parse header and look for next syncword after.
+*/
+void fillAdtsHeader(uint8_t* ah, int packetLen)
 {
+    packetLen += 7; // ADTS帧长度包括 ADTS头大小 + AAC帧长
+
     // fill in ADTS data
-    aacAdtsHeader[0] = (uint8_t)0xFF;
-    aacAdtsHeader[1] = (uint8_t)0xF1;
-    aacAdtsHeader[2] = (uint8_t)(((gAudioType - 1) << 6) + (gAudioRateIndex << 2) + (gAudioChanNum >> 2));
-    aacAdtsHeader[3] = (uint8_t)(((gAudioChanNum & 3) << 6) + (packetLen >> 11));
-    aacAdtsHeader[4] = (uint8_t)((packetLen & 0x7FF) >> 3);
-    aacAdtsHeader[5] = (uint8_t)(((packetLen & 7) << 5) + 0x1F);
-    aacAdtsHeader[6] = (uint8_t)0xFC;
+    ah[0] = (uint8_t)0xFF;
+    ah[1] = (uint8_t)0xF1;
+    ah[2] = (uint8_t)(((gAudioType - 1) << 6) + (gAudioRateIndex << 2) + (gAudioChanNum >> 2));
+    ah[3] = (uint8_t)(((gAudioChanNum & 3) << 6) + (packetLen >> 11));
+    ah[4] = (uint8_t)((packetLen & 0x7FF) >> 3);
+    ah[5] = (uint8_t)(((packetLen & 7) << 5) + 0x1F);
+    ah[6] = (uint8_t)0xFC;
 }
 
 /* demuxMp4File
@@ -199,6 +232,7 @@ void fillAdtsHeader(uint8_t* aacAdtsHeader, int packetLen)
  * https://www.cnblogs.com/lidabo/p/7261558.html
  * https://www.cnblogs.com/yanwei-wang/p/12758570.html
  * 雷神的blog：https://blog.csdn.net/leixiaohua1020/article/details/39767055
+ * https://blog.nowcoder.net/n/e8f9c78aa2e0453aa2800cce162435c5
 */
 int demuxMp4File(const char *sMp4file)
 {
@@ -280,7 +314,7 @@ int demuxMp4File(const char *sMp4file)
             audioindex = trackId;
             aFrameCount = MP4GetTrackNumberOfSamples(oMp4File, trackId);
             // 获取音频的类型/声道数/采样率
-            // 具体解释见 mp4v2库的：src/mp4info.cpp -> PrintAudioInfo()
+            // gAudioType具体解释见 mp4v2库的：src/mp4info.cpp -> PrintAudioInfo()
             gAudioType = MP4GetTrackAudioMpeg4Type(oMp4File, trackId);
             gAudioChanNum = MP4GetTrackAudioChannels(oMp4File, trackId);
             uint32_t audio_time_scale = MP4GetTrackTimeScale(oMp4File, trackId);
@@ -291,24 +325,25 @@ int demuxMp4File(const char *sMp4file)
             //TRACE("=== 音频编码：%s ===\n", audio_name);
             
             // TRACE("=== 音频每秒刻度数(采样率)：%lu ===\n", audio_time_scale);
-            if (audio_time_scale == 48000)
-                gAudioRateIndex = 0x03;
-            else if (audio_time_scale == 44100)
-                gAudioRateIndex = 0x04;
-            else if (audio_time_scale == 32000)
-                gAudioRateIndex = 0x05;
-            else if (audio_time_scale == 24000)
-                gAudioRateIndex = 0x06;
-            else if (audio_time_scale == 22050)
-                gAudioRateIndex = 0x07;
-            else if (audio_time_scale == 16000)
-                gAudioRateIndex = 0x08;
-            else if (audio_time_scale == 12000)
-                gAudioRateIndex = 0x09;
-            else if (audio_time_scale == 11025)
-                gAudioRateIndex = 0x0a;
-            else if (audio_time_scale == 8000)
-                gAudioRateIndex = 0x0b;
+            
+            //  采样率与下标的关系, Ref: ffmpeg mpeg4audio.c int avpriv_mpeg4audio_sample_rates[16]
+            int asri[] = {
+                    96000, 88200, 64000, 48000, 44100, 32000,
+                    24000, 22050, 16000, 12000, 11025, 8000,  7350
+            };
+            for (int i = 0; i < sizeof(asri) / sizeof(int); i++)
+            {
+                if (audio_time_scale == asri[i])
+                {
+                    gAudioRateIndex = i; // such as: audio_time_scale == 48000 hz, gAudioRateIndex = 3
+                    break;
+                }
+            }
+            if (gAudioRateIndex == -1)
+            {
+                printf("Err. audio rate is error.\n");
+                // todo.
+            }
 
         }
     }

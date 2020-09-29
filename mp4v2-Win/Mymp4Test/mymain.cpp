@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 
 int mymp4test(const char* mp4FileName);
 int mymp4test2(const char* mp4FileName);
