@@ -151,9 +151,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="h264ParseSPS.cpp" />
     <ClCompile Include="mymain.cpp" />
     <ClCompile Include="mymp4test.cpp" />
     <ClCompile Include="mymp4test2.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="h264ParseSPS.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

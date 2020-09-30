@@ -9,6 +9,8 @@
 #include <time.h> 
 #include <mp4v2/mp4v2.h>
 
+#include "h264ParseSPS.h"
+
 #if defined _WIN32
 #include "libplatform/platform_win32.h"
 #endif
@@ -346,6 +348,21 @@ int demuxMp4File(const char *sMp4file)
             }
 
         }
+    }
+
+    // 解析h264的sps信息获得video resolution, fps.
+    // 一种是从SPS中解析，但解析fps时，并没有覆盖所有264规范。
+    // 一种是直接调用MP4V2函数，它是用整个文件帧数/时长，得出来的。
+    if (spslen > 0)
+    {
+        int vWidth=-1, vHeight=-1, vFps=-1;
+        bool rs = h264_decode_sps(sps, spslen, vWidth, vHeight, vFps);
+        printf("FROM SPS: parse res:%d.  resolution: %d*%d, fps:%d\n", rs, vWidth, vHeight, vFps);
+
+        vWidth = MP4GetTrackVideoWidth(oMp4File, videoindex);
+        vHeight = MP4GetTrackVideoHeight(oMp4File, videoindex);
+        double vFps2 = MP4GetTrackVideoFrameRate(oMp4File, videoindex);
+        printf("FROM MP4V2: resolution: %d*%d, fps:%f\n", vWidth, vHeight, vFps2);
     }
 
     // 解析完了mp4，开始将各自track分离存储

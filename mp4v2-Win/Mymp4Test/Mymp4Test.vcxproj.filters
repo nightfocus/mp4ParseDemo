@@ -24,5 +24,13 @@
     <ClCompile Include="mymp4test2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="h264ParseSPS.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="h264ParseSPS.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
